@@ -13,7 +13,6 @@
 
   <a class="skip" href="#main">Skip to content</a>
   
-
   <header>
     <div class="wrap nav">
       <a href="#" class="logo" aria-label="CDIE home">
@@ -45,28 +44,55 @@
           <p class="hero-note">Working laboratory ingestion MVP · Built with Gemini 2.5 Flash</p>
         </div>
         
-        <div class="hero-visual" role="img" aria-label="Conceptual illustration of a laboratory document transformed into structured observations. Not an MVP screenshot.">
+        <!-- WIDGET INTERACTIVO INTEGRADO EN LA DERECHA DEL HERO -->
+        <div class="hero-visual interactive-hero-mvp" role="region" aria-label="Interactive MVP Widget">
           <div class="visual-top">
-            <span>DOCUMENT → DATA</span>
-            <span><i class="dot"></i>CDIE</span>
+            <span>LIVE MVP TESTER</span>
+            <span><i class="dot"></i>GEMINI 2.5</span>
           </div>
-          <div class="doc">
-            <strong>Laboratory report</strong>
-            <div class="doc-lines short"></div>
-            <div class="doc-lines"></div>
-            <div class="doc-lines"></div>
-            <div class="doc-lines short"></div>
+          
+          <div class="mvp-widget-container">
+            <form id="analyzerForm" class="analyzer-form">
+              <!-- Dropzone de archivo -->
+              <div class="upload-dropzone" id="dropzone">
+                <input type="file" id="labFile" accept=".pdf,.png,.jpg,.jpeg" class="file-input-hidden" required>
+                <div class="dropzone-content">
+                  <strong id="fileNameDisplay">📁 Drop lab report or click to browse</strong>
+                  <p>Supports PDF, Scans, PNG, JPG</p>
+                  <button type="button" class="btn small-btn">Select file</button>
+                </div>
+              </div>
+
+              <!-- Campo de contraseña opcional -->
+              <div class="password-field-wrap">
+                <label for="pdfPassword" class="small-label">PDF Password (if encrypted):</label>
+                <div class="password-input-group">
+                  <input type="password" id="pdfPassword" class="text-input" placeholder="Optional (e.g. 1234)">
+                  <button type="button" id="togglePass" class="toggle-pass-btn" aria-label="Toggle password visibility">👁️</button>
+                </div>
+              </div>
+
+              <!-- Botón de ejecución -->
+              <button type="submit" class="btn submit-engine-btn">Run Engine & Extract Data 🚀</button>
+            </form>
+
+            <!-- Estado de carga (oculto por defecto) -->
+            <div id="loadingState" class="loading-state" style="display: none;">
+              <div class="spinner"></div>
+              <strong>Processing document with Gemini...</strong>
+              <p class="small-metrics">Extracting values, units & mapping LOINC codes</p>
+            </div>
+
+            <!-- Estado de éxito (oculto por defecto) -->
+            <div id="successState" class="success-state" style="display: none;">
+              <div class="success-icon">✓</div>
+              <strong>Extraction Complete!</strong>
+              <p class="small-metrics">14 observations normalized · LOINC mapped</p>
+              <a href="#mvp" class="btn small-btn" id="resetDemoBtn">Test another document</a>
+            </div>
           </div>
-          <div class="bridge">↓ &nbsp; Extract · Normalize · Validate</div>
-          <div class="data">
-            {<br>
-            &nbsp; <span>"observation"</span>: {<br>
-            &nbsp; &nbsp; "value", "unit", "reference_range",<br>
-            &nbsp; &nbsp; "loinc", "source"<br>
-            &nbsp; }<br>
-            }
-          </div>
-          <p class="visual-caption">Conceptual workflow illustration · Not a product screenshot</p>
+
+          <p class="visual-caption">Interactive front-end preview · Connected to live extraction engine</p>
         </div>
       </div>
       
@@ -377,6 +403,138 @@
       </div>
     </div>
   </footer>
+
+  <!-- Script para el demo funcional del widget en el Hero -->
+  <script>
+    document.addEventListener('DOMContentLoaded', function() {
+      const fileInput = document.getElementById('labFile');
+      const fileNameDisplay = document.getElementById('fileNameDisplay');
+      const analyzerForm = document.getElementById('analyzerForm');
+      const dropzone = document.getElementById('dropzone');
+      const selectFileButton = dropzone ? dropzone.querySelector('.small-btn') : null;
+      const loadingState = document.getElementById('loadingState');
+      const successState = document.getElementById('successState');
+      const togglePass = document.getElementById('togglePass');
+      const pdfPassword = document.getElementById('pdfPassword');
+      const resetDemoBtn = document.getElementById('resetDemoBtn');
+      const loadingMessage = loadingState ? loadingState.querySelector('strong') : null;
+      const successMetrics = successState ? successState.querySelector('.small-metrics') : null;
+
+      let selectedFile = null;
+      const API_BASE_URL = ['localhost', '127.0.0.1'].includes(window.location.hostname)
+        ? 'http://localhost:8000'
+        : 'https://api.cdie.io';
+
+      function triggerDownload(content, filename, contentType) {
+        const blob = new Blob([content], { type: contentType });
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement('a');
+        link.href = url;
+        link.download = filename;
+        document.body.appendChild(link);
+        link.click();
+        link.remove();
+        setTimeout(function() { URL.revokeObjectURL(url); }, 1000);
+      }
+
+      function resetWidget() {
+        loadingState.style.display = 'none';
+        successState.style.display = 'none';
+        analyzerForm.style.display = 'flex';
+        analyzerForm.reset();
+        selectedFile = null;
+        fileNameDisplay.textContent = '📁 Drop lab report or click to browse';
+      }
+
+      if (dropzone) {
+        dropzone.addEventListener('click', function(event) {
+          if (event.target !== fileInput) fileInput.click();
+        });
+      }
+
+      if (selectFileButton) {
+        selectFileButton.addEventListener('click', function(event) {
+          event.preventDefault();
+          event.stopPropagation();
+          fileInput.click();
+        });
+      }
+
+      fileInput.addEventListener('change', function(event) {
+        selectedFile = event.target.files[0] || null;
+        fileNameDisplay.textContent = selectedFile
+          ? '📄 ' + selectedFile.name
+          : '📁 Drop lab report or click to browse';
+      });
+
+      if (togglePass && pdfPassword) {
+        togglePass.addEventListener('click', function() {
+          const isHidden = pdfPassword.type === 'password';
+          pdfPassword.type = isHidden ? 'text' : 'password';
+          togglePass.textContent = isHidden ? '🔒' : '👁️';
+        });
+      }
+
+      analyzerForm.addEventListener('submit', async function(event) {
+        event.preventDefault();
+
+        if (!selectedFile) {
+          fileNameDisplay.textContent = '⚠️ Select a PDF or image first';
+          return;
+        }
+
+        const startTime = performance.now();
+        const formData = new FormData();
+        formData.append('file', selectedFile);
+        if (pdfPassword.value) formData.append('password', pdfPassword.value);
+
+        analyzerForm.style.display = 'none';
+        loadingState.style.display = 'flex';
+        if (loadingMessage) loadingMessage.textContent = 'Processing document with Gemini...';
+
+        try {
+          const response = await fetch(API_BASE_URL + '/api/v1/analyze-lab', {
+            method: 'POST',
+            body: formData
+          });
+
+          if (!response.ok) {
+            const errorData = await response.json().catch(function() { return null; });
+            throw new Error((errorData && errorData.detail) || 'The extraction service returned an error.');
+          }
+
+          const data = await response.json();
+          if (typeof data.csv_data !== 'string' || !data.json_data) {
+            throw new Error('The extraction service returned an incomplete response.');
+          }
+
+          const originalName = selectedFile.name.replace(/\.[^/.]+$/, '');
+          const baseName = originalName + '_clinical_data';
+          triggerDownload(data.csv_data, baseName + '.csv', 'text/csv;charset=utf-8;');
+          setTimeout(function() {
+            triggerDownload(JSON.stringify(data.json_data, null, 2), baseName + '.json', 'application/json');
+          }, 300);
+
+          const elapsedSeconds = ((performance.now() - startTime) / 1000).toFixed(1);
+          if (successMetrics) {
+            successMetrics.textContent = 'CSV and JSON downloaded · Processed in ' + elapsedSeconds + 's';
+          }
+          loadingState.style.display = 'none';
+          successState.style.display = 'flex';
+        } catch (error) {
+          console.error('CDIE extraction error:', error);
+          loadingState.style.display = 'none';
+          analyzerForm.style.display = 'flex';
+          fileNameDisplay.textContent = '⚠️ ' + (error.message || 'Unable to process the document. Try again.');
+        }
+      });
+
+      resetDemoBtn.addEventListener('click', function(event) {
+        event.preventDefault();
+        resetWidget();
+      });
+    });
+  </script>
 
 </body>
 </html>
