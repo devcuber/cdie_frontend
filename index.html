@@ -1,235 +1,382 @@
-<!DOCTYPE html>
-<html lang="es">
+<!doctype html>
+<html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Clinical Data | Ingestion Engine</title>
-    <script src="https://cdn.tailwindcss.com"></script>
-    <script>
-        tailwind.config = {
-            theme: { extend: { colors: { primary: '#2563eb' } } }
-        }
-    </script>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>CDIE — Clinical Data Ingestion Engine</title>
+  <meta name="description" content="AI-powered laboratory document ingestion. From clinical reports to structured observations, normalization and LOINC mapping.">
+  
+  <!-- Enlace al archivo CSS externo -->
+  <link rel="stylesheet" href="assets/css/styles.css">
 </head>
-<body class="bg-slate-50 min-h-screen flex items-center justify-center font-sans">
+<body>
 
-    <div class="max-w-md w-full px-6 py-10 bg-white rounded-2xl shadow-xl border border-slate-100 text-center relative">
+  <a class="skip" href="#main">Skip to content</a>
+  
 
-        <!-- Interruptor discreto de formato (CSV por defecto) -->
-        <div class="absolute top-4 right-4 inline-flex p-0.5 bg-slate-100 rounded-lg text-xs font-medium text-slate-500">
-            <button type="button" id="btnCsv" onclick="setFormat('csv')" class="px-2.5 py-1 rounded-md bg-white text-blue-600 shadow-sm transition-all">CSV</button>
-            <button type="button" id="btnJson" onclick="setFormat('json')" class="px-2.5 py-1 rounded-md hover:text-slate-900 transition-all">JSON</button>
+  <header>
+    <div class="wrap nav">
+      <a href="#" class="logo" aria-label="CDIE home">
+        <img src="assets/images/logo.jpeg" alt="CDIE Logo" class="brand-logo">
+      </a>
+      <nav class="navlinks" aria-label="Main navigation">
+        <a href="#solution">How it works</a>
+        <a href="#mvp">Working MVP</a>
+        <a href="#roadmap">Roadmap</a>
+        <a class="btn" href="mailto:luisangelro@cdie.io?subject=CDIE%20demo%20request">Request a demo ↗</a>
+      </nav>
+    </div>
+  </header>
+
+  <main id="main">
+    
+    <!-- Hero Section -->
+    <div class="wrap">
+      <div class="hero">
+        <div>
+          <p class="eyebrow">Clinical Data Ingestion Engine</p>
+          <h1>Clinical documents.<br><em>Structured data.</em><br>Powered by AI.</h1>
+          <p class="intro">Turn laboratory reports and unstructured clinical documents into normalized, machine-readable healthcare data.</p>
+          <p>Less manual data entry. More time for care.<br>A foundation for connected clinical workflows.</p>
+          <div class="actions">
+            <a class="btn" href="mailto:luisangelro@cdie.io?subject=CDIE%20demo%20request">Request a demo ↗</a>
+            <a class="textlink" href="#solution">See how it works ↓</a>
+          </div>
+          <p class="hero-note">Working laboratory ingestion MVP · Built with Gemini 2.5 Flash</p>
         </div>
-
-        <!-- Header -->
-        <div class="mb-8 mt-2">
-            <div class="inline-flex items-center justify-center w-16 h-16 rounded-full bg-blue-100 text-blue-600 mb-4">
-                <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path></svg>
-            </div>
-            <h1 class="text-2xl font-bold text-slate-900">Clinical Data</h1>
-            <p class="text-slate-500 mt-2">Extrae datos clínicos estructurados desde PDFs o imágenes en segundos.</p>
+        
+        <div class="hero-visual" role="img" aria-label="Conceptual illustration of a laboratory document transformed into structured observations. Not an MVP screenshot.">
+          <div class="visual-top">
+            <span>DOCUMENT → DATA</span>
+            <span><i class="dot"></i>CDIE</span>
+          </div>
+          <div class="doc">
+            <strong>Laboratory report</strong>
+            <div class="doc-lines short"></div>
+            <div class="doc-lines"></div>
+            <div class="doc-lines"></div>
+            <div class="doc-lines short"></div>
+          </div>
+          <div class="bridge">↓ &nbsp; Extract · Normalize · Validate</div>
+          <div class="data">
+            {<br>
+            &nbsp; <span>"observation"</span>: {<br>
+            &nbsp; &nbsp; "value", "unit", "reference_range",<br>
+            &nbsp; &nbsp; "loinc", "source"<br>
+            &nbsp; }<br>
+            }
+          </div>
+          <p class="visual-caption">Conceptual workflow illustration · Not a product screenshot</p>
         </div>
-
-        <!-- Acción -->
-        <div id="ui-area">
-            <label for="fileInput" class="cursor-pointer group flex flex-col items-center justify-center w-full h-32 border-2 border-dashed border-slate-300 rounded-xl hover:border-blue-500 hover:bg-blue-50 transition-all">
-                <span class="text-blue-600 font-semibold group-hover:scale-105 transition-transform">Seleccionar archivo PDF o imagen</span>
-                <span class="text-xs text-slate-400 mt-1">Soporta resultados de laboratorio estándar</span>
-            </label>
-            <input type="file" id="fileInput" accept="application/pdf,image/png,image/jpeg,image/webp" class="hidden">
-
-            <!-- Chip con el nombre del archivo seleccionado -->
-            <div id="fileChip" class="hidden mt-3 inline-flex items-center gap-2 max-w-full px-3 py-1.5 bg-slate-100 rounded-full text-sm text-slate-600">
-                <svg class="w-4 h-4 shrink-0 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path></svg>
-                <span id="fileName" class="truncate"></span>
-            </div>
-
-            <!-- Contraseña del PDF (siempre visible) -->
-            <div class="mt-4 flex items-center gap-2">
-                <svg class="w-4 h-4 shrink-0 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"></path></svg>
-                
-                <div class="relative w-full">
-                    <input type="password" id="passwordInput" placeholder="Contraseña del PDF (opcional)" class="w-full text-sm pl-3 pr-10 py-2 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent">
-                    
-                    <button type="button" onclick="togglePassword()" class="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 focus:outline-none">
-                        <!-- Icono de Ojo Cerrado (por defecto) -->
-                        <svg id="eyeClosedIcon" class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.88 9.88l-3.29-3.29m7.532 7.532l3.29 3.29M3 3l3.59 3.59m0 0A9.953 9.953 0 0112 5c4.478 0 8.268 2.943 9.543 7a10.025 10.025 0 01-4.132 5.411m0 0L21 21"></path>
-                        </svg>
-                        <!-- Icono de Ojo Abierto (oculto por defecto) -->
-                        <svg id="eyeOpenIcon" class="w-4 h-4 hidden" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path>
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"></path>
-                        </svg>
-                    </button>
-                </div>
-            </div>
-
-            <!-- Botón de análisis -->
-            <button type="button" id="btnAnalyze" onclick="analyzeFile()" disabled class="mt-3 w-full py-2.5 rounded-xl font-semibold text-white bg-blue-600 disabled:bg-slate-200 disabled:text-slate-400 disabled:cursor-not-allowed hover:bg-blue-700 transition-colors">
-                Analizar
-            </button>
-        </div>
-
-        <!-- Spinner (oculto inicialmente) -->
-        <div id="spinner" class="hidden py-8">
-            <div class="w-10 h-10 border-4 border-blue-200 border-t-blue-600 rounded-full animate-spin mx-auto"></div>
-            <p id="spinnerText" class="mt-4 text-slate-600 font-medium animate-pulse">Generando formatos...</p>
-        </div>
-
-        <!-- Vista de Éxito (oculto inicialmente) -->
-        <div id="success-view" class="hidden py-4">
-            <div class="inline-flex items-center justify-center w-12 h-12 rounded-full bg-emerald-100 text-emerald-600 mb-3">
-                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
-                </svg>
-            </div>
-            <h3 class="text-lg font-bold text-slate-900">¡Descarga completada!</h3>
-            <p class="text-slate-500 text-sm mt-1">Los archivos CSV y JSON se han descargado exitosamente.</p>
-            
-            <!-- Insignia bonita para el tiempo transcurrido -->
-            <div class="mt-4 inline-flex items-center gap-1.5 px-3.5 py-1.5 bg-blue-50 border border-blue-100 rounded-full text-xs font-semibold text-blue-700">
-                <svg class="w-4 h-4 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path>
-                </svg>
-                <span>Tiempo de procesamiento: <strong id="elapsedTime">0.0s</strong></span>
-            </div>
-
-            <button type="button" onclick="window.location.reload()" class="mt-6 w-full py-2.5 rounded-xl font-semibold text-white bg-blue-600 hover:bg-blue-700 transition-colors">
-                Aceptar
-            </button>
-        </div>
+      </div>
+      
+      <div class="strip">
+        <span>AI-powered extraction</span>
+        <span>LOINC mapping, where applicable</span>
+        <span>Original-source traceability</span>
+        <span>CSV / Excel outputs</span>
+      </div>
     </div>
 
-    <script>
-        // Detección automática de la URL base del API
-        let API_BASE_URL;
-        if (window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1") {
-            API_BASE_URL = "http://localhost:8000"; // Tu entorno local de FastAPI
-        } else {
-            API_BASE_URL = "https://api.cdie.io"; // Tu API de producción en Render
-        }
+    <!-- Problem Section -->
+    <section id="problem">
+      <div class="wrap">
+        <div class="split problem-intro">
+          <div>
+            <p class="eyebrow">01 / The problem</p>
+            <h2>Clinical data should move.<br>Not be retyped.</h2>
+            <p class="lead">Patients still bring printed laboratory results to their appointments. Critical clinical information remains trapped on paper, in PDFs and in scanned reports from multiple laboratories.</p>
+            <p>The time and effort physicians and their assistants spend on manual capture is invaluable and could be better devoted to patient care. Manual transcription is also inherently prone to human error.</p>
+          </div>
+          <figure class="problem-photo">
+            <img src="assets/images/ilustracion1.jpeg" alt="Patient handing printed laboratory results to a physician">
+            <figcaption>Care happens face to face. Clinical data still arrives on paper.<span>Illustrative scene.</span></figcaption>
+          </figure>
+        </div>
+        
+        <div class="problem-issues">
+          <div class="issue">
+            <span>01</span>
+            <div>
+              <h3>Time taken from patient care</h3>
+              <p>Repetitive capture and transcription add work for physicians and their teams.</p>
+            </div>
+          </div>
+          <div class="issue">
+            <span>02</span>
+            <div>
+              <h3>Errors that travel downstream</h3>
+              <p>Manual copying creates opportunities for missing or incorrectly entered information.</p>
+            </div>
+          </div>
+          <div class="issue">
+            <span>03</span>
+            <div>
+              <h3>Information that stays fragmented</h3>
+              <p>Different layouts and reporting conventions delay usable, structured clinical data.</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
 
-        let selectedFormat = 'csv';
-        let selectedFile = null;
+    <!-- Solution Section -->
+    <section class="tint" id="solution">
+      <div class="wrap">
+        <div class="section-heading">
+          <p class="eyebrow">02 / The solution</p>
+          <h2>One pipeline.<br>From document to usable data.</h2>
+          <p>CDIE uses AI to identify, extract and structure clinical information. Laboratory observations can be normalized and mapped to LOINC, where applicable, while retaining original values for traceability.</p>
+        </div>
+        
+        <ol class="pipeline">
+          <li>
+            <span class="num">01 / INPUT</span>
+            <h3>Clinical Document</h3>
+            <p>PDF / Scan<br>Laboratory reports</p>
+          </li>
+          <li>
+            <span class="num">02 / EXTRACT</span>
+            <h3>Gemini AI Extraction</h3>
+            <p>Tests, results, units<br>Multimodal understanding</p>
+          </li>
+          <li>
+            <span class="num">03 / NORMALIZE</span>
+            <h3>Normalize + LOINC</h3>
+            <p>Standard terminology<br>Mapping where applicable</p>
+          </li>
+          <li>
+            <span class="num">04 / CHECK</span>
+            <h3>Validate</h3>
+            <p>Quality checks<br>Source traceability</p>
+          </li>
+          <li>
+            <span class="num">05 / OUTPUT</span>
+            <h3>Structured Clinical Data</h3>
+            <p>CSV / Excel · JSON<br>API in development</p>
+          </li>
+        </ol>
+        
+        <p class="note">Pipeline overview. Expanded validation and confidence scoring are in development; interoperability integrations are on the roadmap.</p>
+      </div>
+    </section>
 
-        function setFormat(format) {
-            selectedFormat = format;
-            const btnCsv = document.getElementById('btnCsv');
-            const btnJson = document.getElementById('btnJson');
+    <!-- MVP Section -->
+    <section id="mvp">
+      <div class="wrap">
+        <div class="evidence-heading">
+          <div class="section-heading">
+            <p class="eyebrow">03 / Working MVP</p>
+            <h2>From a laboratory report<br>to structured observations.</h2>
+            <p>The current MVP focuses on laboratory data ingestion: values, units, reference ranges, normalization and LOINC mapping, with original-source traceability.</p>
+          </div>
+          <span class="badge">Available now · MVP</span>
+        </div>
+        
+        <div class="evidence">
+          <figure>
+            <div class="frame-title">
+              <span>01 / SOURCE DOCUMENT</span>
+              <span>PDF / Scan</span>
+            </div>
+            <img id="source-img" src="assets/images/ilustracion2.jpeg" alt="Source laboratory report screenshot">
+            <figcaption>Original laboratory report supplied for this MVP demonstration.</figcaption>
+          </figure>
+          
+          <figure>
+            <div class="frame-title">
+              <span>02 / STRUCTURED OUTPUT</span>
+              <span>Excel + LOINC</span>
+            </div>
+            <img id="output-img" src="assets/images/ilustracion3.jpeg" alt="Structured MVP output screenshot">
+            <figcaption>Structured observations — values, units, reference ranges and LOINC mapping where applicable.</figcaption>
+          </figure>
+        </div>
+        
+        <p class="note" id="image-status" aria-live="polite">Actual MVP screenshots supplied by the founders. These examples contain patient identifiers; replace with de-identified copies before public publication.</p>
+      </div>
+    </section>
 
-            if (format === 'csv') {
-                btnCsv.className = "px-2.5 py-1 rounded-md bg-white text-blue-600 shadow-sm transition-all";
-                btnJson.className = "px-2.5 py-1 rounded-md hover:text-slate-900 transition-all";
-            } else {
-                btnJson.className = "px-2.5 py-1 rounded-md bg-white text-blue-600 shadow-sm transition-all";
-                btnCsv.className = "px-2.5 py-1 rounded-md hover:text-slate-900 transition-all";
-            }
-        }
+    <!-- AI Core Section -->
+    <section class="dark">
+      <div class="wrap split">
+        <div>
+          <p class="eyebrow">04 / AI at the core</p>
+          <h2>Different documents.<br>A consistent representation.</h2>
+          <p class="lead">AI is part of CDIE’s core architecture.</p>
+          <p>Laboratories use different layouts, terminology and reporting conventions. CDIE combines multimodal document understanding with normalization and validation to transform those heterogeneous inputs into structured clinical observations.</p>
+        </div>
+        <div>
+          <div class="ai-panel">
+            <span class="badge">Current MVP</span>
+            <h3>Google Gemini 2.5 Flash</h3>
+            <p>Multimodal document understanding and clinical data extraction, combined with normalization and source traceability.</p>
+          </div>
+          <div class="ai-panel">
+            <span class="badge future">Planned evaluation</span>
+            <h3>MedGemma on Google Cloud / Vertex AI</h3>
+            <p>Evaluate healthcare-focused models for extraction, validation and clinical understanding as the platform evolves.</p>
+          </div>
+        </div>
+      </div>
+    </section>
 
-        function togglePassword() {
-            const passwordInput = document.getElementById('passwordInput');
-            const eyeClosedIcon = document.getElementById('eyeClosedIcon');
-            const eyeOpenIcon = document.getElementById('eyeOpenIcon');
+    <!-- Healthcare Workflows Section -->
+    <section>
+      <div class="wrap">
+        <div class="section-heading">
+          <p class="eyebrow">05 / Built for healthcare</p>
+          <h2>One ingestion engine.<br>Multiple healthcare workflows.</h2>
+        </div>
+        
+        <div class="audiences">
+          <article>
+            <h3>Physicians & practices</h3>
+            <p>Convert incoming laboratory reports into usable data and reduce repetitive capture across clinical and administrative teams.</p>
+          </article>
+          <article>
+            <h3>Hospitals & networks</h3>
+            <p>Build a foundation for standardized clinical information across document-based workflows.</p>
+          </article>
+          <article>
+            <h3>EHRs & digital health</h3>
+            <p>Planned API access will bring document ingestion and normalization into existing platforms and applications.</p>
+          </article>
+        </div>
+        
+        <div class="business">
+          <div>
+            <p class="eyebrow">Business model</p>
+            <h3>Clinical data ingestion<br>as a service.</h3>
+          </div>
+          <div>
+            <p>CDIE is being built as a <strong>SaaS platform for individual physicians and healthcare organizations</strong>, with API access planned for platforms and enterprise customers.</p>
+            <p>Usage-based and monthly subscription options are under evaluation. Pricing and processing limits have not yet been finalized.</p>
+          </div>
+        </div>
+      </div>
+    </section>
 
-            if (passwordInput.type === 'password') {
-                passwordInput.type = 'text';
-                eyeClosedIcon.classList.add('hidden');
-                eyeOpenIcon.classList.remove('hidden');
-            } else {
-                passwordInput.type = 'password';
-                eyeClosedIcon.classList.remove('hidden');
-                eyeOpenIcon.classList.add('hidden');
-            }
-        }
+    <!-- Roadmap Section -->
+    <section class="tint" id="roadmap">
+      <div class="wrap">
+        <div class="section-heading">
+          <p class="eyebrow">06 / Product roadmap</p>
+          <h2>A working foundation.<br>A clear path forward.</h2>
+          <p>Today’s laboratory ingestion MVP is the starting point for a broader clinical document intelligence platform.</p>
+        </div>
+        
+        <div class="roadmap">
+          <article>
+            <span class="badge">Available now</span>
+            <h3>Laboratory ingestion MVP</h3>
+            <ul>
+              <li>AI-powered laboratory report extraction</li>
+              <li>Structured observations, values, units and reference ranges</li>
+              <li>Clinical normalization and LOINC mapping</li>
+              <li>Original-source traceability</li>
+              <li>CSV / Excel and structured data outputs</li>
+            </ul>
+          </article>
+          
+          <article>
+            <span class="badge develop">In development</span>
+            <h3>Production-ready engine</h3>
+            <ul>
+              <li>Expanded validation and quality controls</li>
+              <li>Confidence scoring</li>
+              <li>Broader laboratory format coverage</li>
+              <li>API-based ingestion and retrieval</li>
+              <li>Production-grade security and operational controls</li>
+              <li>Scalable cloud deployment</li>
+            </ul>
+          </article>
+          
+          <article>
+            <span class="badge future">Roadmap</span>
+            <h3>Healthcare interoperability</h3>
+            <ul>
+              <li>FHIR-compatible structured outputs</li>
+              <li><strong>SMART on FHIR</strong> integration pathways</li>
+              <li><strong>HL7 v2 ORU/API</strong> integration pathways</li>
+              <li>EHR / EMR connectors</li>
+              <li>Additional clinical document types</li>
+              <li>MedGemma evaluation on Google Cloud / Vertex AI</li>
+              <li>Advanced clinical validation and enterprise ingestion workflows</li>
+            </ul>
+          </article>
+        </div>
+      </div>
+    </section>
 
-        const input = document.getElementById('fileInput');
-        const uiArea = document.getElementById('ui-area');
-        const spinner = document.getElementById('spinner');
-        const spinnerText = document.getElementById('spinnerText');
-        const successView = document.getElementById('success-view');
-        const fileChip = document.getElementById('fileChip');
-        const fileNameEl = document.getElementById('fileName');
-        const btnAnalyze = document.getElementById('btnAnalyze');
-        const elapsedTimeEl = document.getElementById('elapsedTime');
+    <!-- About Section -->
+    <section id="about">
+      <div class="wrap">
+        <div class="split">
+          <div>
+            <p class="eyebrow">07 / About CDIE</p>
+            <h2>Healthcare interoperability<br>starts before the API.</h2>
+          </div>
+          <div>
+            <p>CDIE — Clinical Data Ingestion Engine — is a healthcare technology startup building the infrastructure that turns human-readable clinical documents into machine-readable clinical data.</p>
+            <p>Based in Mexico City, Mexico, our mission is to eliminate unnecessary manual clinical data capture and make information usable by physicians, healthcare organizations and digital systems.</p>
+          </div>
+        </div>
+        
+        <div class="team">
+          <article class="person">
+            <div class="founder-photo luis">
+              <img src="assets/images/founder1.jpeg" alt="Luis Ángel Rodríguez Alemán">
+            </div>
+            <div>
+              <h3>Luis Ángel Rodríguez Alemán</h3>
+              <p>Co-Founder</p>
+              <p>Technology executive with CIO experience leading digital transformation across healthcare, banking, government and education. A computer engineering graduate of ITAM, Luis Ángel brings a cross-sector perspective on making technology serve real operational needs.</p>
+              <a class="textlink" href="https://www.linkedin.com/in/luisangelrodriguezaleman/" target="_blank" rel="noopener noreferrer" aria-label="Luis Ángel Rodríguez Alemán on LinkedIn">LinkedIn ↗</a>
+            </div>
+          </article>
+          
+          <article class="person">
+            <div class="founder-photo jose">
+              <img src="assets/images/founder2.jpg" alt="Jose Luis Jimenez Castillo">
+            </div>
+            <div>
+              <h3>Jose Luis Jimenez Castillo</h3>
+              <p>Co-Founder</p>
+              <p>Systems engineer with more than 10 years of software development experience and a background in Python solution architecture. Jose Luis brings software engineering and architecture expertise to CDIE.</p>
+              <a class="textlink" href="https://www.linkedin.com/in/devcuber/" target="_blank" rel="noopener noreferrer" aria-label="Jose Luis Jimenez Castillo on LinkedIn">LinkedIn ↗</a>
+            </div>
+          </article>
+        </div>
+      </div>
+    </section>
 
-        function triggerDownload(content, filename, contentType) {
-            const blob = new Blob([content], { type: contentType });
-            const url = URL.createObjectURL(blob);
-            const a = document.createElement('a');
-            a.href = url;
-            a.download = filename;
-            document.body.appendChild(a);
-            a.click();
-            a.remove();
-            URL.revokeObjectURL(url);
-        }
+    <!-- CTA Section -->
+    <section class="dark">
+      <div class="wrap cta">
+        <div>
+          <p class="eyebrow">Let’s make clinical data usable</p>
+          <h2>Bring your clinical documents.<br>See what comes next.</h2>
+          <p>For physicians reducing manual entry and healthcare organizations building connected clinical workflows.</p>
+          <div class="contact">
+            <a href="mailto:luisangelro@cdie.io">luisangelro@cdie.io</a> · Mexico City, Mexico
+          </div>
+        </div>
+        <a class="btn light" href="mailto:luisangelro@cdie.io?subject=CDIE%20demo%20request">Request a demo ↗</a>
+      </div>
+    </section>
 
-        input.addEventListener('change', (e) => {
-            const file = e.target.files[0];
-            if (!file) return;
+  </main>
 
-            selectedFile = file;
-            fileNameEl.textContent = file.name;
-            fileChip.classList.remove('hidden');
-            btnAnalyze.disabled = false;
-        });
+  <footer>
+    <div class="wrap footer">
+      <div>
+        <img src="assets/images/logo.jpeg" alt="CDIE Logo" class="brand-footer">
+        <strong>CDIE — Clinical Data Ingestion Engine</strong><br>
+        © 2026 CDIE. All rights reserved.
+      </div>
+    </div>
+  </footer>
 
-        async function analyzeFile() {
-            if (!selectedFile) return;
-
-            // Iniciar cronómetro
-            const startTime = performance.now();
-
-            uiArea.classList.add('hidden');
-            spinner.classList.remove('hidden');
-            spinnerText.textContent = 'Generando formatos CSV y JSON...';
-
-            const formData = new FormData();
-            formData.append('file', selectedFile);
-
-            const password = document.getElementById('passwordInput').value;
-            if (password) {
-                formData.append('password', password);
-            }
-
-            try {
-                // Se concatena la URL base detectada automáticamente con tu endpoint
-                const response = await fetch(`${API_BASE_URL}/api/v1/analyze-lab`, { method: 'POST', body: formData });
-
-                if (!response.ok) {
-                    const errorData = await response.json().catch(() => null);
-                    const message = errorData?.detail || 'Error en el servidor';
-                    throw new Error(message);
-                }
-
-                const data = await response.json();
-                const originalName = selectedFile.name.replace(/\.[^/.]+$/, ''); 
-                const baseName = `${originalName}_clinical_data`;
-                
-                // DESCARGA MÚLTIPLE CON RETRASO: Evita que el navegador bloquee la segunda descarga
-                triggerDownload(data.csv_data, `${baseName}.csv`, 'text/csv;charset=utf-8;');
-                
-                setTimeout(() => {
-                    const jsonString = JSON.stringify(data.json_data, null, 2);
-                    triggerDownload(jsonString, `${baseName}.json`, 'application/json');
-                }, 300);
-
-                // Detener cronómetro y calcular tiempo exacto en segundos (con 1 decimal)
-                const endTime = performance.now();
-                const durationSeconds = ((endTime - startTime) / 1000).toFixed(1);
-                elapsedTimeEl.textContent = `${durationSeconds}s`;
-
-                // Ocultar spinner y mostrar la vista de éxito
-                spinner.classList.add('hidden');
-                successView.classList.remove('hidden');
-
-            } catch (error) {
-                console.error(error);
-                alert(error.message || "Ups, algo salió mal. Inténtalo de nuevo.");
-                window.location.reload();
-            }
-        }
-    </script>
 </body>
 </html>
