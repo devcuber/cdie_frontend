@@ -8,6 +8,7 @@
   
   <!-- Enlace al archivo CSS externo -->
   <link rel="stylesheet" href="assets/css/styles.css">
+  <link rel="icon" type="image/png" href="assets/images/favicon.png">
 </head>
 <body>
 
@@ -16,7 +17,7 @@
   <header>
     <div class="wrap nav">
       <a href="#" class="logo" aria-label="CDIE home">
-        <img src="assets/images/logo.jpeg" alt="CDIE Logo" class="brand-logo">
+        <img src="assets/images/logo.png" alt="CDIE Logo" class="brand-logo">
       </a>
       <nav class="navlinks" aria-label="Main navigation">
         <a href="#solution">How it works</a>
@@ -91,6 +92,15 @@
               <a href="#mvp" class="btn small-btn" id="resetDemoBtn">Test another document</a>
             </div>
           </div>
+
+          <section class="requests-panel" aria-labelledby="requestsTitle">
+            <div class="requests-heading">
+              <h2 id="requestsTitle">Your extraction requests</h2>
+              <span id="pollingStatus" class="polling-status" aria-live="polite">Loading...</span>
+            </div>
+            <p id="emptyRequests" class="empty-requests">Your submitted files will appear here.</p>
+            <div id="requestsList" class="requests-list" aria-live="polite"></div>
+          </section>
 
           <p class="visual-caption">Interactive front-end preview · Connected to live extraction engine</p>
         </div>
@@ -397,7 +407,7 @@
   <footer>
     <div class="wrap footer">
       <div>
-        <img src="assets/images/logo.jpeg" alt="CDIE Logo" class="brand-footer">
+        <img src="assets/images/logo.png" alt="CDIE Logo" class="brand-footer">
         <strong>CDIE — Clinical Data Ingestion Engine</strong><br>
         © 2026 CDIE. All rights reserved.
       </div>
@@ -406,133 +416,87 @@
 
   <!-- Script para el demo funcional del widget en el Hero -->
   <script>
-    document.addEventListener('DOMContentLoaded', function() {
+    document.addEventListener('DOMContentLoaded', function () {
       const fileInput = document.getElementById('labFile');
       const fileNameDisplay = document.getElementById('fileNameDisplay');
       const analyzerForm = document.getElementById('analyzerForm');
       const dropzone = document.getElementById('dropzone');
       const selectFileButton = dropzone ? dropzone.querySelector('.small-btn') : null;
       const loadingState = document.getElementById('loadingState');
-      const successState = document.getElementById('successState');
+      const loadingMessage = loadingState ? loadingState.querySelector('strong') : null;
       const togglePass = document.getElementById('togglePass');
       const pdfPassword = document.getElementById('pdfPassword');
-      const resetDemoBtn = document.getElementById('resetDemoBtn');
-      const loadingMessage = loadingState ? loadingState.querySelector('strong') : null;
-      const successMetrics = successState ? successState.querySelector('.small-metrics') : null;
+      const requestsList = document.getElementById('requestsList');
+      const emptyRequests = document.getElementById('emptyRequests');
+      const pollingStatus = document.getElementById('pollingStatus');
+      const API_BASE_URL = ['localhost', '127.0.0.1'].includes(location.hostname) ? 'http://localhost:8000' : 'https://api.cdie.io';
+      let selectedFile = null, pollingTimer = null;
 
-      let selectedFile = null;
-      const API_BASE_URL = ['localhost', '127.0.0.1'].includes(window.location.hostname)
-        ? 'http://localhost:8000'
-        : 'https://api.cdie.io';
+      function cookie(name) { return document.cookie.split('; ').find(v => v.startsWith(name + '='))?.split('=').slice(1).join('='); }
+      function validUuid(v) { return /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(v || ''); }
+      function ensureUserId() {
+        const existingId = cookie('cdie_user_id');
+        if (validUuid(existingId)) return existingId;
 
-      function triggerDownload(content, filename, contentType) {
-        const blob = new Blob([content], { type: contentType });
-        const url = URL.createObjectURL(blob);
-        const link = document.createElement('a');
-        link.href = url;
-        link.download = filename;
-        document.body.appendChild(link);
-        link.click();
-        link.remove();
-        setTimeout(function() { URL.revokeObjectURL(url); }, 1000);
+        const newId = crypto.randomUUID();
+        document.cookie = 'cdie_user_id=' + newId + '; Path=/; Max-Age=31536000; SameSite=Lax' + (location.protocol === 'https:' ? '; Secure' : '');
+
+        const savedId = cookie('cdie_user_id');
+        if (savedId !== newId) throw new Error('Unable to persist cdie_user_id cookie. Enable cookies for this site and reload the page.');
+        return savedId;
       }
-
-      function resetWidget() {
-        loadingState.style.display = 'none';
-        successState.style.display = 'none';
-        analyzerForm.style.display = 'flex';
-        analyzerForm.reset();
-        selectedFile = null;
-        fileNameDisplay.textContent = '📁 Drop lab report or click to browse';
+      function esc(v) { const n = document.createElement('span'); n.textContent = v || ''; return n.innerHTML; }
+      function date(v) { return v ? new Date(v).toLocaleString() : '—'; }
+      function detailError(data, fallback) { return (data && (data.detail?.message || data.detail?.error || data.detail)) || fallback; }
+      async function api(path, options) {
+        const userId = ensureUserId();
+        if (!validUuid(userId)) throw new Error('Unable to identify the user. Please refresh the page and try again.');
+        const requestOptions = options || {};
+        const headers = new Headers(requestOptions.headers || {});
+        headers.set('cdie_user_id', userId);
+        const res = await fetch(API_BASE_URL + path, Object.assign({ credentials: 'include' }, requestOptions, { headers }));
+        if (!res.ok) { const data = await res.json().catch(() => null); throw new Error(detailError(data, 'The service returned an error.')); }
+        return res;
       }
-
-      if (dropzone) {
-        dropzone.addEventListener('click', function(event) {
-          if (event.target !== fileInput) fileInput.click();
-        });
+      function stopPolling() { if (pollingTimer) { clearInterval(pollingTimer); pollingTimer = null; } }
+      function startPolling() { if (!pollingTimer) pollingTimer = setInterval(loadRequests, 10000); }
+      function render(items) {
+        items.sort((a,b) => new Date(b.created_at) - new Date(a.created_at));
+        emptyRequests.style.display = items.length ? 'none' : 'block';
+        requestsList.innerHTML = items.map(item => {
+          const ready = item.status === 'completed';
+          const status = item.status === 'pending' ? 'Queued' : item.status === 'processing' ? 'Processing' : item.status === 'completed' ? 'Completed' : 'Failed';
+          return '<article class="request-item"><div><div class="request-file">' + esc(item.original_filename) + '</div><div class="request-meta"><span class="status-badge status-' + esc(item.status) + '">' + status + '</span><span>' + date(item.created_at) + '</span></div></div><div class="request-actions"><button class="download-btn" data-json="' + item.id + '" data-name="' + esc(item.original_filename) + '"' + (ready ? '' : ' disabled') + '>JSON</button><button class="download-btn" data-csv="' + item.id + '"' + (ready ? '' : ' disabled') + '>CSV</button></div>' + (item.status === 'failed' ? '<div class="request-error">' + esc(item.error_message || 'Extraction failed.') + '</div>' : '') + '</article>';
+        }).join('');
+        const active = items.some(item => item.status === 'pending' || item.status === 'processing');
+        pollingStatus.textContent = active ? 'Refreshing every 10s' : (items.length ? 'Up to date' : '');
+        active ? startPolling() : stopPolling();
       }
-
-      if (selectFileButton) {
-        selectFileButton.addEventListener('click', function(event) {
-          event.preventDefault();
-          event.stopPropagation();
-          fileInput.click();
-        });
-      }
-
-      fileInput.addEventListener('change', function(event) {
-        selectedFile = event.target.files[0] || null;
-        fileNameDisplay.textContent = selectedFile
-          ? '📄 ' + selectedFile.name
-          : '📁 Drop lab report or click to browse';
-      });
-
-      if (togglePass && pdfPassword) {
-        togglePass.addEventListener('click', function() {
-          const isHidden = pdfPassword.type === 'password';
-          pdfPassword.type = isHidden ? 'text' : 'password';
-          togglePass.textContent = isHidden ? '🔒' : '👁️';
-        });
-      }
-
-      analyzerForm.addEventListener('submit', async function(event) {
-        event.preventDefault();
-
-        if (!selectedFile) {
-          fileNameDisplay.textContent = '⚠️ Select a PDF or image first';
-          return;
-        }
-
-        const startTime = performance.now();
-        const formData = new FormData();
-        formData.append('file', selectedFile);
-        if (pdfPassword.value) formData.append('password', pdfPassword.value);
-
-        analyzerForm.style.display = 'none';
-        loadingState.style.display = 'flex';
-        if (loadingMessage) loadingMessage.textContent = 'Processing document with Gemini...';
-
+      async function loadRequests() { try { const res = await api('/api/v1/lab-extraction-requests'); render(await res.json()); } catch (err) { pollingStatus.textContent = err.message; stopPolling(); } }
+      function download(content, name, type) { const url = URL.createObjectURL(new Blob([content], {type})); const a = document.createElement('a'); a.href=url; a.download=name; a.click(); setTimeout(() => URL.revokeObjectURL(url), 1000); }
+      requestsList.addEventListener('click', async function(e) {
+        const jsonId = e.target.dataset.json, csvId = e.target.dataset.csv;
+        if (!jsonId && !csvId) return;
+        e.target.disabled = true;
         try {
-          const response = await fetch(API_BASE_URL + '/api/v1/analyze-lab', {
-            method: 'POST',
-            body: formData
-          });
-
-          if (!response.ok) {
-            const errorData = await response.json().catch(function() { return null; });
-            throw new Error((errorData && errorData.detail) || 'The extraction service returned an error.');
-          }
-
-          const data = await response.json();
-          if (typeof data.csv_data !== 'string' || !data.json_data) {
-            throw new Error('The extraction service returned an incomplete response.');
-          }
-
-          const originalName = selectedFile.name.replace(/\.[^/.]+$/, '');
-          const baseName = originalName + '_clinical_data';
-          triggerDownload(data.csv_data, baseName + '.csv', 'text/csv;charset=utf-8;');
-          setTimeout(function() {
-            triggerDownload(JSON.stringify(data.json_data, null, 2), baseName + '.json', 'application/json');
-          }, 300);
-
-          const elapsedSeconds = ((performance.now() - startTime) / 1000).toFixed(1);
-          if (successMetrics) {
-            successMetrics.textContent = 'CSV and JSON downloaded · Processed in ' + elapsedSeconds + 's';
-          }
-          loadingState.style.display = 'none';
-          successState.style.display = 'flex';
-        } catch (error) {
-          console.error('CDIE extraction error:', error);
-          loadingState.style.display = 'none';
-          analyzerForm.style.display = 'flex';
-          fileNameDisplay.textContent = '⚠️ ' + (error.message || 'Unable to process the document. Try again.');
-        }
+          if (jsonId) { const res = await api('/api/v1/lab-extraction-requests/' + jsonId + '/result'); const original = e.target.dataset.name.replace(/\.[^/.]+$/, ''); download(JSON.stringify(await res.json(), null, 2), original + '_clinical_data.json', 'application/json'); }
+          else { const res = await api('/api/v1/lab-extraction-requests/' + csvId + '/csv'); const blob = await res.blob(); const cd = res.headers.get('content-disposition') || ''; const match = cd.match(/filename="([^"]+)"/); download(blob, match ? match[1] : 'clinical_data.csv', 'text/csv;charset=utf-8'); }
+        } catch (err) { pollingStatus.textContent = err.message; } finally { e.target.disabled = false; }
       });
-
-      resetDemoBtn.addEventListener('click', function(event) {
-        event.preventDefault();
-        resetWidget();
+      function resetForm() { analyzerForm.reset(); selectedFile = null; fileNameDisplay.textContent = '📁 Drop lab report or click to browse'; }
+      if (dropzone) dropzone.addEventListener('click', e => { if (e.target !== fileInput) fileInput.click(); });
+      if (selectFileButton) selectFileButton.addEventListener('click', e => { e.preventDefault(); e.stopPropagation(); fileInput.click(); });
+      fileInput.addEventListener('change', e => { selectedFile=e.target.files[0] || null; fileNameDisplay.textContent=selectedFile ? '📄 ' + selectedFile.name : '📁 Drop lab report or click to browse'; });
+      if (togglePass) togglePass.addEventListener('click', () => { const hidden=pdfPassword.type === 'password'; pdfPassword.type=hidden ? 'text' : 'password'; togglePass.textContent=hidden ? '🔒' : '👁️'; });
+      analyzerForm.addEventListener('submit', async function(e) {
+        e.preventDefault(); if (!selectedFile) { fileNameDisplay.textContent='⚠️ Select a PDF or image first'; return; }
+        const data=new FormData(); data.append('file', selectedFile); if (pdfPassword.value) data.append('password', pdfPassword.value);
+        loadingState.style.display='flex'; if (loadingMessage) loadingMessage.textContent='Adding document to extraction queue...';
+        try { await api('/api/v1/lab-extraction-requests', {method:'POST', body:data}); resetForm(); await loadRequests(); }
+        catch (err) { fileNameDisplay.textContent='⚠️ ' + err.message; }
+        finally { loadingState.style.display='none'; }
       });
+      ensureUserId(); loadRequests();
     });
   </script>
 
