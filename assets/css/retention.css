@@ -1,0 +1,20 @@
+.retention-note{margin:26px 0;padding:22px;border:1px solid #9bbbac;border-left:4px solid #2EB872;border-radius:8px}
+.retention-note h3{font-size:17px;line-height:1.4;margin:0 0 10px}
+.retention-note p{font-size:14px;margin:0 0 10px}
+.retention-note a,.retention-notice a,.result-retention a{text-decoration:underline;text-underline-offset:3px}
+.dark .retention-note{border-color:#789eac}
+.dark .retention-note a{color:#dcf5eb}
+.retention-notice,.result-retention{padding:15px;border:1px solid #7bacc5;border-left:4px solid #2EB872;border-radius:6px;background:#003B7A;color:#fff;font-size:13px;line-height:1.6;overflow-wrap:anywhere}
+.retention-notice{margin-bottom:18px}
+.retention-notice p,.result-retention p{color:#e1edf5;margin:6px 0 10px}
+.retention-notice a,.result-retention a{color:#dcf5eb}
+.result-retention{grid-column:1/-1;width:100%;margin-top:12px}
+.request-actions{flex-wrap:wrap}
+.delete-planned{display:flex;flex-wrap:wrap;align-items:center;gap:10px;margin-top:14px}
+.delete-planned button:disabled{opacity:.65;cursor:not-allowed}
+.delete-planned span{font-size:12px}
+.policy-content{max-width:800px;margin:auto;padding:48px 0}
+.policy-content h1{font-size:clamp(30px,5vw,46px);letter-spacing:-1px}
+.policy-content h2{font-size:24px;letter-spacing:0;margin-top:32px}
+.policy-content .back{display:inline-block;margin-bottom:30px}
+.policy-content a{overflow-wrap:anywhere}
