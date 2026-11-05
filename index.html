@@ -54,7 +54,7 @@
           </div>
           
           <div class="mvp-widget-container">
-            <aside class="retention-notice" id="upload-retention"><strong>Before you upload</strong><p>Uploaded documents and extracted results are stored for up to 24 hours, then automatically deleted. Only upload documents you are authorized to share.</p><a href="data-retention/">Data retention policy</a></aside>
+            <aside class="retention-notice" id="upload-retention"><strong>Before you upload</strong><p>Uploaded documents and extracted results are stored for up to 24 hours, then automatically deleted. Only upload documents you are authorized to share.</p><a href="#data-retention">Data retention policy</a></aside>
             <form id="analyzerForm" class="analyzer-form" aria-describedby="upload-retention">
               <!-- Dropzone de archivo -->
               <div class="upload-dropzone" id="dropzone">
@@ -196,7 +196,7 @@
         </ol>
         
         <p class="note">Pipeline overview. Expanded validation and confidence scoring are in development; interoperability integrations are on the roadmap.</p>
-      <aside class="retention-note"><h3>Privacy by Design. Your Data, Your Control.</h3><p>Your uploaded documents and extracted results are temporarily stored for up to 24 hours, then automatically deleted.</p><p>Download and save your results to your device before they expire.</p><a href="data-retention/">Learn more about our data retention policy</a></aside></div>
+      <aside class="retention-note"><h3>Privacy by Design. Your Data, Your Control.</h3><p>Your uploaded documents and extracted results are temporarily stored for up to 24 hours, then automatically deleted.</p><p>Download and save your results to your device before they expire.</p><a href="#data-retention">Learn more about our data retention policy</a></aside></div>
     </section>
 
     <!-- MVP Section -->
@@ -389,6 +389,24 @@
       </div>
     </section>
 
+    <!-- Data retention policy: part of the landing page -->
+    <section class="tint" id="data-retention" aria-labelledby="retention-title">
+      <div class="wrap">
+        <div class="section-heading">
+          <p class="eyebrow">08 / Data Retention &amp; Privacy</p>
+          <h2 id="retention-title">Your data.<br>Your control.</h2>
+          <p class="lead">Privacy by Design.</p>
+          <p>GerLab-AI processes laboratory reports and transforms them into structured clinical data. CDIE is not a permanent repository for clinical documents or patient records.</p>
+        </div>
+        <div class="retention-grid">
+          <article><h3>Temporary storage &amp; automatic deletion</h3><p>Your uploaded documents and extracted results are temporarily stored for up to 24 hours, then automatically deleted. Temporary storage lets you process, review and download your results.</p><p>After deletion, your documents and results are no longer available through GerLab-AI.</p></article>
+          <article><h3>Download &amp; save your results</h3><p>Use <strong>Download CSV (Excel)</strong> beside a completed extraction request. Open the downloaded CSV in Excel and save it to your device before it expires. You can also download the JSON result.</p><p>Viewing results on the website does not save a local copy. Keep downloaded files in a storage location you are authorized to use.</p></article>
+          <article><h3>Early deletion</h3><span class="badge future">Planned feature — not available yet</span><p>A <strong>Delete Now</strong> feature is planned to let you delete uploaded documents and extracted results before automatic expiration. The disabled control does not send a deletion request.</p></article>
+          <article><h3>Before uploading</h3><p>Only upload documents you are authorized to share and process. Clinical documents may contain sensitive patient information.</p><p>Questions about retention, processing or deletion? Contact <a href="mailto:luisangelro@cdie.io">luisangelro@cdie.io</a>.</p></article>
+        </div>
+      </div>
+    </section>
+
     <!-- CTA Section -->
     <section class="dark">
       <div class="wrap cta">
@@ -396,7 +414,6 @@
           <p class="eyebrow">Let’s make clinical data usable</p>
           <h2>Upload a clinical document.<br>See the structured output.</h2>
           <p>Test the live extraction engine with a laboratory report in PDF or image format.</p>
-          <aside class="retention-note"><h3>Privacy by Design. Your Data, Your Control.</h3><p>Your uploaded documents and extracted results are temporarily stored for up to 24 hours, then automatically deleted.</p><p>Download and save your results to your device before they expire.</p><a href="data-retention/">Learn more about our data retention policy</a></aside>
           <div class="contact">
             <a href="mailto:luisangelro@cdie.io">luisangelro@cdie.io</a> · Mexico City, Mexico
           </div>
@@ -412,7 +429,7 @@
       <div>
         <img src="assets/images/logo.png" alt="CDIE Logo" class="brand-footer">
         <strong>CDIE — Clinical Data Ingestion Engine</strong><br>
-        © 2026 CDIE. All rights reserved.<br><a href="data-retention/">Data Retention &amp; Privacy</a>
+        © 2026 CDIE. All rights reserved.<br><a href="#data-retention">Data Retention &amp; Privacy</a>
       </div>
     </div>
   </footer>
@@ -469,7 +486,7 @@
         requestsList.innerHTML = items.map(item => {
           const ready = item.status === 'completed';
           const status = item.status === 'pending' ? 'Queued' : item.status === 'processing' ? 'Processing' : item.status === 'completed' ? 'Completed' : 'Failed';
-          return '<article class="request-item"><div><div class="request-file">' + esc(item.original_filename) + '</div><div class="request-meta"><span class="status-badge status-' + esc(item.status) + '">' + status + '</span><span>' + date(item.created_at) + '</span></div></div><div class="request-actions"><button class="download-btn" data-json="' + item.id + '" data-name="' + esc(item.original_filename) + '"' + (ready ? '' : ' disabled') + '>JSON</button><button class="download-btn" data-csv="' + item.id + '"' + (ready ? '' : ' disabled') + '>Download CSV (Excel)</button></div>' + (ready ? '<aside class="result-retention"><strong>Your results are ready — save a copy</strong><p>Temporary storage: up to 24 hours. Download your CSV file, open it in Excel and save it to your device. Uploaded documents and extracted results are automatically deleted when they expire.</p><a href="data-retention/">Data retention policy</a><div class="delete-planned"><button type="button" class="download-btn" disabled aria-describedby="delete-planned-' + esc(item.id) + '">Delete Now</button><span id="delete-planned-' + esc(item.id) + '">Planned feature — not available yet.</span></div></aside>' : '') + (item.status === 'failed' ? '<div class="request-error">' + esc(item.error_message || 'Extraction failed.') + '</div>' : '') + '</article>';
+          return '<article class="request-item"><div><div class="request-file">' + esc(item.original_filename) + '</div><div class="request-meta"><span class="status-badge status-' + esc(item.status) + '">' + status + '</span><span>' + date(item.created_at) + '</span></div></div><div class="request-actions"><button class="download-btn" data-json="' + item.id + '" data-name="' + esc(item.original_filename) + '"' + (ready ? '' : ' disabled') + '>JSON</button><button class="download-btn" data-csv="' + item.id + '"' + (ready ? '' : ' disabled') + '>Download CSV (Excel)</button></div>' + (ready ? '<aside class="result-retention"><strong>Your results are ready — save a copy</strong><p>Temporary storage: up to 24 hours. Download your CSV file, open it in Excel and save it to your device. Uploaded documents and extracted results are automatically deleted when they expire.</p><a href="#data-retention">Data retention policy</a><div class="delete-planned"><button type="button" class="download-btn" disabled aria-describedby="delete-planned-' + esc(item.id) + '">Delete Now</button><span id="delete-planned-' + esc(item.id) + '">Planned feature — not available yet.</span></div></aside>' : '') + (item.status === 'failed' ? '<div class="request-error">' + esc(item.error_message || 'Extraction failed.') + '</div>' : '') + '</article>';
         }).join('');
         const active = items.some(item => item.status === 'pending' || item.status === 'processing');
         pollingStatus.textContent = active ? 'Refreshing every 10s' : (items.length ? 'Up to date' : '');

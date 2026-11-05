@@ -18,3 +18,5 @@
 .policy-content h2{font-size:24px;letter-spacing:0;margin-top:32px}
 .policy-content .back{display:inline-block;margin-bottom:30px}
 .policy-content a{overflow-wrap:anywhere}
+
+.retention-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:30px 48px}.retention-grid article{border-top:2px solid #2EB872;padding-top:22px}.retention-grid h3{font-size:19px}.retention-grid p{font-size:15px}.retention-grid .badge{margin:0 0 16px}.retention-grid a{overflow-wrap:anywhere}@media(max-width:700px){.retention-grid{grid-template-columns:1fr;gap:25px}}
